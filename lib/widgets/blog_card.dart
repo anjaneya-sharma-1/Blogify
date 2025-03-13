@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/blog.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -5,13 +6,13 @@ import 'package:timeago/timeago.dart' as timeago;
 class BlogCard extends StatelessWidget {
   final Blog blog;
   final bool isAuthor;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const BlogCard({
     Key? key,
     required this.blog,
-    required this.isAuthor,
-    required this.onTap,
+    this.isAuthor = false,
+    this.onTap,
   }) : super(key: key);
 
   @override
@@ -28,14 +29,25 @@ class BlogCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (blog.imageUrl != null && blog.imageUrl!.isNotEmpty)
-              Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(blog.imageUrl!),
+            if (blog.imageBase64 != null && blog.imageBase64!.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                child: SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: Image.memory(
+                    base64Decode(blog.imageBase64!),
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading image: $error');
+                      return Container(
+                        height: 180,
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Icon(Icons.error, color: Colors.grey[400], size: 36),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),

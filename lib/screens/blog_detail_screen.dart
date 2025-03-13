@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/blog.dart';
@@ -73,7 +74,7 @@ class _BlogDetailScreenState extends State<BlogDetailScreen> {
             id: _blog!.id,
             title: _blog!.title,
             content: _blog!.content,
-            imageUrl: _blog!.imageUrl,
+            imageBase64: _blog!.imageBase64, // Changed from imageUrl
             userId: _blog!.userId,
             authorName: _blog!.authorName,
             authorPhotoUrl: _blog!.authorPhotoUrl,
@@ -169,12 +170,12 @@ class _BlogDetailScreenState extends State<BlogDetailScreen> {
               : CustomScrollView(
                   slivers: [
                     SliverAppBar(
-                      expandedHeight: _blog!.imageUrl != null && _blog!.imageUrl!.isNotEmpty ? 300 : 0,
+                      expandedHeight: _blog!.imageBase64 != null && _blog!.imageBase64!.isNotEmpty ? 300 : 0, // Changed from imageUrl
                       pinned: true,
                       flexibleSpace: FlexibleSpaceBar(
-                        background: _blog!.imageUrl != null && _blog!.imageUrl!.isNotEmpty
-                            ? Image.network(
-                                _blog!.imageUrl!,
+                        background: _blog!.imageBase64 != null && _blog!.imageBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(_blog!.imageBase64!),
                                 fit: BoxFit.cover,
                               )
                             : null,
@@ -190,7 +191,7 @@ class _BlogDetailScreenState extends State<BlogDetailScreen> {
                                       blogId: widget.blogId,
                                       initialTitle: _blog!.title,
                                       initialContent: _blog!.content,
-                                      initialImageUrl: _blog!.imageUrl,
+                                      initialImageBase64: _blog!.imageBase64, // Change parameter name to match CreateBlogScreen
                                     ),
                                   ),
                                 ).then((_) => _loadBlog());

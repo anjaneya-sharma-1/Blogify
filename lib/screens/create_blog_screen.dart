@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -9,14 +10,14 @@ class CreateBlogScreen extends StatefulWidget {
   final String? blogId;
   final String? initialTitle;
   final String? initialContent;
-  final String? initialImageUrl;
+  final String? initialImageBase64; // Renamed from initialImageUrl
 
   const CreateBlogScreen({
     Key? key,
     this.blogId,
     this.initialTitle,
     this.initialContent,
-    this.initialImageUrl,
+    this.initialImageBase64, // Renamed parameter
   }) : super(key: key);
 
   @override
@@ -30,7 +31,7 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   final BlogService _blogService = BlogService();
 
   File? _imageFile;
-  String? _existingImageUrl;
+  String? _existingImageBase64;  // Changed from _existingImageUrl
   bool _isLoading = false;
   List<String> _categories = [];
   List<String> _selectedCategories = [];
@@ -49,8 +50,8 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       _contentController.text = widget.initialContent!;
     }
     
-    if (widget.initialImageUrl != null) {
-      _existingImageUrl = widget.initialImageUrl;
+    if (widget.initialImageBase64 != null) {  // Updated reference
+      _existingImageBase64 = widget.initialImageBase64;
     }
     
     _loadCategories();
@@ -75,21 +76,29 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
   }
 
   Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1800,
-      maxHeight: 1800,
-    );
-    
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        _existingImageUrl = null; // Clear existing image if a new one is selected
-      });
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+      );
+      
+      if (pickedFile != null) {
+        print('Image picked: ${pickedFile.path}');
+        
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _existingImageBase64 = null; // Clear existing image if a new one is selected
+        });
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error selecting image: $e')),
+      );
     }
   }
 
+  // Update the _saveBlog method to handle the image upload properly
   Future<void> _saveBlog() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -102,6 +111,11 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
         
         if (user == null) {
           throw Exception('You must be logged in to create a blog');
+        }
+        
+        // Make sure we have at least one category selected
+        if (_selectedCategories.isEmpty) {
+          _selectedCategories.add('Uncategorized');
         }
         
         if (widget.blogId != null) {
@@ -142,7 +156,10 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.toString()}')),
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       } finally {
@@ -291,14 +308,14 @@ class _CreateBlogScreenState extends State<CreateBlogScreen> {
                   ),
                 ),
               )
-            else if (_existingImageUrl != null)
+            else if (_existingImageBase64 != null)
               Container(
                 height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   image: DecorationImage(
-                    image: NetworkImage(_existingImageUrl!),
+                    image: MemoryImage(base64Decode(_existingImageBase64!)),
                     fit: BoxFit.cover,
                   ),
                 ),

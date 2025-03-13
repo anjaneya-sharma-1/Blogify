@@ -1,12 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/blog.dart';
 import '../models/user.dart';
 
 class BlogService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Get all blogs
   Stream<List<Blog>> getBlogs() {
@@ -76,27 +75,27 @@ class BlogService {
     String content, 
     File? imageFile, 
     UserModel user, 
-    List<String> categories,
-    bool featured,
+    [List<String>? categories,
+    bool? featured]
   ) async {
     try {
-      String? imageUrl;
+      String? imageBase64;
       
-      // Upload image if provided
+      // Convert image to base64 if provided
       if (imageFile != null) {
-        imageUrl = await _uploadImage(imageFile, user.id);
+        imageBase64 = await _convertImageToBase64(imageFile);
       }
       
-      // Create blog document
+      // Create blog document with default values if parameters are missing
       DocumentReference docRef = await _firestore.collection('blogs').add({
         'title': title,
         'content': content,
-        'imageUrl': imageUrl,
+        'imageBase64': imageBase64, // Store base64 string instead of URL
         'userId': user.id,
         'authorName': user.name,
         'authorPhotoUrl': user.photoUrl,
-        'categories': categories,
-        'featured': featured,
+        'categories': categories ?? ['Uncategorized'],
+        'featured': featured ?? false,
         'likes': 0,
         'views': 0,
         'createdAt': FieldValue.serverTimestamp(),
@@ -105,6 +104,7 @@ class BlogService {
       
       return docRef.id;
     } catch (e) {
+      print('Failed to create blog: $e');
       throw Exception('Failed to create blog: $e');
     }
   }
@@ -115,26 +115,35 @@ class BlogService {
     String title, 
     String content, 
     File? imageFile, 
-    List<String> categories,
-    bool featured,
+    [List<String>? categories,
+    bool? featured]
   ) async {
     try {
       Map<String, dynamic> data = {
         'title': title,
         'content': content,
-        'categories': categories,
-        'featured': featured,
         'updatedAt': FieldValue.serverTimestamp(),
       };
       
-      // Upload new image if provided
+      // Only update categories if provided
+      if (categories != null) {
+        data['categories'] = categories;
+      }
+      
+      // Only update featured if provided
+      if (featured != null) {
+        data['featured'] = featured;
+      }
+      
+      // Convert and add new image if provided
       if (imageFile != null) {
-        String imageUrl = await _uploadImage(imageFile, blogId);
-        data['imageUrl'] = imageUrl;
+        String imageBase64 = await _convertImageToBase64(imageFile);
+        data['imageBase64'] = imageBase64;
       }
       
       await _firestore.collection('blogs').doc(blogId).update(data);
     } catch (e) {
+      print('Failed to update blog: $e');
       throw Exception('Failed to update blog: $e');
     }
   }
@@ -142,15 +151,7 @@ class BlogService {
   // Delete blog
   Future<void> deleteBlog(String blogId) async {
     try {
-      // Get the blog to check if it has an image
-      Blog blog = await getBlogById(blogId);
-      
-      // Delete the image if it exists
-      if (blog.imageUrl != null && blog.imageUrl!.isNotEmpty) {
-        await _deleteImage(blog.imageUrl!);
-      }
-      
-      // Delete the blog document
+      // No need to delete images separately since they're stored in the document
       await _firestore.collection('blogs').doc(blogId).delete();
     } catch (e) {
       throw Exception('Failed to delete blog: $e');
@@ -210,29 +211,36 @@ class BlogService {
     }
   }
 
-  // Upload image to Firebase Storage
-  Future<String> _uploadImage(File imageFile, String userId) async {
+  // Convert image file to base64 string
+  Future<String> _convertImageToBase64(File imageFile) async {
     try {
-      String fileName = '${DateTime.now().millisecondsSinceEpoch}_$userId';
-      Reference storageRef = _storage.ref().child('blog_images/$fileName');
-      
-      UploadTask uploadTask = storageRef.putFile(imageFile);
-      TaskSnapshot taskSnapshot = await uploadTask;
-      
-      return await taskSnapshot.ref.getDownloadURL();
-    } catch (e) {
-      throw Exception('Failed to upload image: $e');
-    }
-  }
+      // Check if file exists and is accessible
+      if (!imageFile.existsSync()) {
+        throw Exception('Image file does not exist or is not accessible');
+      }
 
-  // Delete image from Firebase Storage
-  Future<void> _deleteImage(String imageUrl) async {
-    try {
-      Reference storageRef = _storage.refFromURL(imageUrl);
-      await storageRef.delete();
+      print('Converting image to base64: ${imageFile.path}');
+      final fileSize = await imageFile.length();
+      print('File size: $fileSize bytes');
+      
+      // Read file as bytes
+      List<int> imageBytes = await imageFile.readAsBytes();
+      
+      // Compress image if too large (optional)
+      if (fileSize > 500000) { // If over 500KB, compress it
+        print('Image too large, compressing...');
+        // You may want to add image compression here using a package like flutter_image_compress
+        // For now, we'll just warn about it
+      }
+      
+      // Convert bytes to base64
+      String base64String = base64Encode(imageBytes);
+      print('Conversion successful. Base64 size: ${base64String.length} characters');
+      
+      return base64String;
     } catch (e) {
-      print('Failed to delete image: $e');
-      // Continue with blog deletion even if image deletion fails
+      print('Error during image conversion: $e');
+      throw Exception('Failed to convert image: $e');
     }
   }
 }

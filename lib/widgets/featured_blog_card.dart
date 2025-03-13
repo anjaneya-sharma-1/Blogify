@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/blog.dart';
 
@@ -32,12 +33,25 @@ class FeaturedBlogCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: blog.imageUrl != null && blog.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      blog.imageUrl!,
+              child: blog.imageBase64 != null && blog.imageBase64!.isNotEmpty
+                  ? Image.memory(
+                      base64Decode(blog.imageBase64!),
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        print('Error loading image: $error');
+                        return Container(
+                          width: double.infinity,
+                          height: double.infinity,
+                          color: Theme.of(context).primaryColor.withOpacity(0.2),
+                          child: Icon(
+                            Icons.image,
+                            size: 64,
+                            color: Theme.of(context).primaryColor.withOpacity(0.5),
+                          ),
+                        );
+                      },
                     )
                   : Container(
                       width: double.infinity,
