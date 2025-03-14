@@ -5,7 +5,6 @@ A feature-rich blog application built with Flutter that allows users to create, 
 ![image](https://github.com/user-attachments/assets/2fe647e0-1d37-4f53-b337-24932f5de723)
 ![image](https://github.com/user-attachments/assets/ff9e72e5-9b7e-4596-bd5c-b9f40a905b86)
 ![Screenshot 2025-03-13 044304](https://github.com/user-attachments/assets/4dfdf77f-5f82-453f-b8b2-9384eaa2619f)
-![Screenshot 2025-03-13 044250](https://github.com/user-attachments/assets/7d45953a-af64-4e45-9f17-e2da6eb8e3a3)
 ![Screenshot 2025-03-13 043041](https://github.com/user-attachments/assets/f06a8e98-8a1b-4b99-b1d8-e6114b6534f0)
 ![Screenshot 2025-03-13 043029](https://github.com/user-attachments/assets/5a32bb28-3657-4585-af86-6480e446ba72)
 
